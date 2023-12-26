@@ -10,6 +10,7 @@ from django.contrib.auth.decorators import login_required
 import openai
 import json
 from django.http import HttpResponse
+from django.http import HttpResponseBadRequest
 
 
 
@@ -51,19 +52,33 @@ def logoutuser(request):
         return redirect('home')
 
 @login_required
+
+
+@login_required
 def createtodo(request):
-    if request.method == 'GET':
-        return render(request, 'todoapp/createtodo.html', {'form':TodoForm()})
+    if request.method == 'POST':
+        form = TodoForm(request.POST)
+        if form.is_valid():
+            try:
+                newtodo = form.save(commit=False)
+                newtodo.user = request.user
+                newtodo.save()
+                messages.success(request, 'Todo created successfully.')
+                return redirect('currenttodos', newtodo.id)
+            except Exception as e:
+                messages.error(request, f'Error creating todo: {e}')
+        else:
+            messages.error(request, 'Invalid form data. Please correct the errors.')
+    
     else:
-        try:
-            form = TodoForm(request.POST)
-            newtodo = form.save(commit=False)
-            newtodo.user = request.user
-            newtodo.save()
-            print("im here")
-            return redirect('currenttodos',newtodo.id)
-        except ValueError:
-            return render(request, 'todoapp/createtodo.html', {'form':TodoForm(), 'error':'Bad data passed in. Try again.'})
+        form = TodoForm()
+
+    return render(request, 'todoapp/createtodo.html', {'form': form})
+
+
+
+
+
 
 from django.shortcuts import render, redirect
 from django.contrib.auth.decorators import login_required
@@ -73,11 +88,27 @@ import openai
 import json
 from django.http import HttpResponse
 
-api_key = "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"
+api_key = "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"
+# Replace the existing 'currenttodos' view with the modified version below
+def process_and_save_extracted_data(user, extracted_todolist):
+    try:
+        json_data = json.loads(extracted_todolist)
+        new_todo = Todo.objects.create(
+            user=user,
+            activity_name=json_data.get('activity_name', ''),
+            activity_description=json_data.get('activity_description', ''),
+            activity_time=json_data.get('activity_time', '')
+        )
+        new_todo.save()
+    except json.JSONDecodeError:
+        # Handle JSON decoding error
+        pass
+
 
 @login_required
 def currenttodos(request):
     extracted_todolist = None  # Initialize the variable to store extracted data
+    todos = Todo.objects.filter(user=request.user).order_by('-created')
 
     if request.method == 'POST':
         form = UploadFileForm(request.POST, request.FILES)
@@ -90,13 +121,13 @@ def currenttodos(request):
             # Define a prompt for the OpenAI API to understand and extract relevant information
             prompt = f'''Given a text containing a list of tasks and associated details, extract the TODO list information and format it as a JSON output with the following keys:
 
-activity_name: The name of the activity.
-activity_description: A brief description of the activity.
-activity_time: The time at which the activity is scheduled.
-Ensure that the extracted JSON output captures each task along with its description and scheduled time.
+            activity_name: The name of the activity.
+            activity_description: A brief description of the activity.
+            activity_time: The time at which the activity is scheduled.
+            Ensure that the extracted JSON output captures each task along with its description and scheduled time.
 
-:\n{text}'''
-        
+            :\n{text}'''
+
             # Call the OpenAI API to extract the todo list
             response = openai.Completion.create(
                 engine="text-davinci-002",
@@ -108,11 +139,34 @@ Ensure that the extracted JSON output captures each task along with its descript
             # Extract the extracted todo list from the API response
             extracted_todolist = response.choices[0].text.strip()
 
+            # Create a new todo based on the extracted data
+            # Modify this part based on the actual structure of the extracted data
+            try:
+                json_data = json.loads(extracted_todolist)
+                if isinstance(json_data,dict):
+                    activity_name = json_data.get('activity_name', '')
+                    if activity_name:
+            # Extract other fields from JSON data
+                        activity_description = json_data.get('activity_description', '')
+                        activity_time = json_data.get('activity_time', '')
+                    
+                    new_todo = Todo.objects.create(
+                        user=request.user,
+                        activity_name=json_data.get('activity_name', ''),
+                        activity_description =json_data.get('activity_description', ''),
+                        activity_time =json_data.get('activity_time', '')
+                )
+                    new_todo.save()
+                else:
+                    pass
+            except json.JSONDecodeError:
+                # Handle JSON decoding error
+                pass
+
     else:
         form = UploadFileForm()
 
-    return render(request, 'todoapp/currenttodos.html', {'form': form, 'extracted_todolist': extracted_todolist})
-
+    return render(request, 'todoapp/currenttodos.html', {'form': form, 'extracted_todolist': extracted_todolist, 'todos': todos})
 
 
 

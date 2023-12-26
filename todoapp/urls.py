@@ -18,6 +18,7 @@ urlpatterns = [
     path('upload/', upload_file, name='upload_file'),
     path('todo/<int:todo_pk>/complete', views.completetodo, name='completetodo'),
     path('todo/<int:todo_pk>/delete', views.deletetodo, name='deletetodo')
+    
 
 
 ]

@@ -36,19 +36,17 @@
 <!-- Your form rendering code goes here -->
 
 
-
-
-
-
-
 <form action="{% url 'currenttodos' %}" method="post" enctype="multipart/form-data">
         {% csrf_token %}     
         <input type="file" name="file" required>
             <button type="submit">Upload</button>
         </form>
 
+
 <form action="{% url 'createtodo' %}" method="post" enctype="multipart/form-data">
         <table>{{form.as_table}}</table> 
+
+
         
            
 

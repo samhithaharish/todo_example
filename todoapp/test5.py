@@ -45,3 +45,60 @@ Ensure that the extracted JSON output captures each task along with its descript
     #return render(request, 'currenttodos.html', {'form':form,'json_data': extracted_todolist}) 
 
 
+
+
+
+{% extends "todoapp/base.html" %}
+
+{% block content %}
+    <div class="row justify-content-center mt-5">
+        <div class="col-md-10">
+            {% if todos %}
+                 <h1>{{ todos.count }} Current Todo{{ todos.count|pluralize }}</h1>
+            {% else %}
+                           <h1>Current Todos</h1>
+            {% endif %}
+        </div>
+    </div>
+    <div class="row justify-content-center mt-5">
+        <div class="col-md-10">
+        {% if todos %}
+            <div class="list-group">
+                {% for todo in todos %}
+                    <a href="{% url 'viewtodo' todo.id %}" class="list-group-item list-group-item-action{% if todo.important %} list-group-item-danger{% endif %}"><b>{{ todo.title }}</b>{% if todo.memo %} - {{ todo.memo|truncatechars:30 }}{% endif %}</a>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="text-center">
+                <h2>Looks like you don't have any todos! Nice work.</h2>
+            <br>
+            <a role="button" class="btn btn-primary" href="{% url 'createtodo' %}">New Todo</a>
+            </div>
+        {% endif %}
+        </div>
+    </div>
+<!-- yourapp/templates/upload_file.html -->
+{% if extracted_todolist %}
+    <p>Extracted Todo List:</p>
+    <pre>{{ extracted_todolist }}</pre>
+{% endif %}
+
+<!-- Your form rendering code goes here -->
+
+
+
+
+
+<form action="{% url 'currenttodos' %}" method="post" enctype="multipart/form-data">
+        {% csrf_token %}     
+        <input type="file" name="file" required>
+            <button type="submit">Upload</button>
+        </form>
+
+
+       
+
+    
+
+{% endblock %}
+
