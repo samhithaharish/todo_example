@@ -88,7 +88,7 @@ import openai
 import json
 from django.http import HttpResponse
 
-api_key = "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"
+api_key = "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"
 # Replace the existing 'currenttodos' view with the modified version below
 def process_and_save_extracted_data(user, extracted_todolist):
     try:
@@ -106,8 +106,9 @@ def process_and_save_extracted_data(user, extracted_todolist):
 
 
 @login_required
+
 def currenttodos(request):
-    extracted_todolist = None  # Initialize the variable to store extracted data
+    extracted_todolist = None
     todos = Todo.objects.filter(user=request.user).order_by('-created')
 
     if request.method == 'POST':
@@ -115,10 +116,8 @@ def currenttodos(request):
         if form.is_valid():
             text_file = request.FILES['file']
 
-            # Read the text from the input file
             text = text_file.read().decode('utf-8')
 
-            # Define a prompt for the OpenAI API to understand and extract relevant information
             prompt = f'''Given a text containing a list of tasks and associated details, extract the TODO list information and format it as a JSON output with the following keys:
 
             activity_name: The name of the activity.
@@ -128,7 +127,6 @@ def currenttodos(request):
 
             :\n{text}'''
 
-            # Call the OpenAI API to extract the todo list
             response = openai.Completion.create(
                 engine="text-davinci-002",
                 prompt=prompt,
@@ -136,30 +134,30 @@ def currenttodos(request):
                 api_key=api_key
             )
 
-            # Extract the extracted todo list from the API response
             extracted_todolist = response.choices[0].text.strip()
 
-            # Create a new todo based on the extracted data
-            # Modify this part based on the actual structure of the extracted data
             try:
-                json_data = json.loads(extracted_todolist)
-                if isinstance(json_data,dict):
-                    activity_name = json_data.get('activity_name', '')
-                    if activity_name:
-            # Extract other fields from JSON data
-                        activity_description = json_data.get('activity_description', '')
-                        activity_time = json_data.get('activity_time', '')
-                    
-                    new_todo = Todo.objects.create(
-                        user=request.user,
-                        activity_name=json_data.get('activity_name', ''),
-                        activity_description =json_data.get('activity_description', ''),
-                        activity_time =json_data.get('activity_time', '')
-                )
-                    new_todo.save()
-                else:
-                    pass
-            except json.JSONDecodeError:
+                json_data_list = json.loads(extracted_todolist)
+                print(f'Extracted JSON data list: {json_data_list}')  # Add this line for debugging
+
+                for json_data in json_data_list:
+                    if isinstance(json_data, dict):
+                        activity_name = json_data.get('activity_name', '')
+                        if activity_name:
+                            activity_description = json_data.get('activity_description', '')
+                            activity_time = json_data.get('activity_time', '')
+
+                            print(f'Creating new todo with: activity_name={activity_name}, activity_description={activity_description}, activity_time={activity_time}')  # Add this line for debugging
+
+                            new_todo = Todo(
+                                user=request.user,
+                                title=activity_name,
+                                memo=activity_description,
+                                created=activity_time
+                            )
+                            new_todo.save()
+            except json.JSONDecodeError as e:
+                print(f'Error decoding JSON: {e}')  # Add this line for debugging
                 # Handle JSON decoding error
                 pass
 
@@ -167,7 +165,6 @@ def currenttodos(request):
         form = UploadFileForm()
 
     return render(request, 'todoapp/currenttodos.html', {'form': form, 'extracted_todolist': extracted_todolist, 'todos': todos})
-
 
 
 
@@ -230,7 +227,7 @@ def upload_file(request):
         form = UploadFileForm(request.POST, request.FILES)
         if form.is_valid():
             text_file = request.FILES['file']
-            openai.api_key = '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'  # Replace with your actual OpenAI API key
+            openai.api_key = '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'  # Replace with your actual OpenAI API key
             response = openai.Completion.create(
                 engine="text-davinci-002",
                 prompt=text_file.read().decode('utf-8'),
